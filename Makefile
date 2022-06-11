@@ -54,7 +54,7 @@ build: fmt vet ## Build manager binary.
 
 .PHONY: docker
 docker: build
-	echo make some docker build steps here :)
+	echo "make some docker build steps here :)"
 	# az acr login -n pahealyaks
 	# docker build -t pahealyaks.azurecr.io/aks-static-gateway-cni:latest .
 	# docker push pahealyaks.azurecr.io/aks-static-gateway-cni:latest
