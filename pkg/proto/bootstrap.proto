@@ -2,7 +2,7 @@ syntax = "proto3";
 
 option go_package = "github.com/phealy/aks-tls-bootstrap;aks_tls_bootstrap";
 
-package AKSTlsBootstrap;
+package aks_tls_bootstrap;
 
 service AKSBootstrapTokenRequest {
     // Step 1 of retrieving a bootstrap token; generates a nonce to be used by the
