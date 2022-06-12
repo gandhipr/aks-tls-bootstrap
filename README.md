@@ -9,14 +9,16 @@ Implements the following options:
 
 ## To do
 
-- [x] Nonce generation
-- [x] IMDS/attested data querying
-- [x] Attested data validation
-- [x] VM ID validation
+- [X] Nonce generation
+- [X] IMDS/attested data querying
+- [X] Attested data validation
+- [X] VM ID validation
 - [X] add TLS support
 - [X] AAD auth to service (validate against a list of approved IDs somehow)
 - [X] ALPN support on the client (used for Envoy routing)
 - [X] Cache intermediate certificates so we don't have to retrieve them every time
+- [X] Add option to allow root certificates to only be populated from a given directory (pinning) based on [this blog post](https://techcommunity.microsoft.com/t5/azure-governance-and-management/azure-instance-metadata-service-attested-data-tls-critical/ba-p/2888953)
 - [ ] Create bootstrap token secret
 - [ ] Add webhooks to validate CSR requests and delete completed tokens
 - [ ] Multi-cloud support (i.e. don't be hardcoded to public cloud
+- [ ] Make server image run as non-root user

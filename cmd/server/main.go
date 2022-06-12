@@ -15,18 +15,19 @@ import (
 )
 
 var (
-	log                           = logrus.New()
-	logFormat                     = flag.String("log-format", "json", "Log format: json or text, default: json")
-	hostname                      = flag.String("hostname", "0.0.0.0", "The hostname to listen on.")
-	port                          = flag.Int("port", 9123, "The port to run the gRPC server on.")
-	jwksUrl                       = flag.String("jwks-url", "https://login.microsoftonline.com/common/discovery/v2.0/keys", "The JWKS endpoint for the Azure AD to use.")
-	signerHostName                = flag.String("imds-signer-name", "metadata.azure.com", "The hostname that must be present in the signing certificate from IMDS.")
-	tenantId                      = flag.String("tenant-id", "", "Required tenant ID for authentication")
-	allowedClientIds              = flag.String("allowed-client-ids", "", "A comma separated list of allowed client IDs for the service.")
-	tlsCert                       = flag.String("tls-cert", "", "TLS certificate path")
-	tlsKey                        = flag.String("tls-key", "", "TLS key path")
-	attestedDataIntermediateCerts = flag.String("attested-data-intermediate-cert-dir", "", "A path to a directory containing intermediate certificates to be loaded to the cache.")
-	debug                         = flag.Bool("debug", false, "enable debug logging (WILL LOG AUTHENTICATION DATA)")
+	log                 = logrus.New()
+	logFormat           = flag.String("log-format", "json", "Log format: json or text, default: json")
+	hostname            = flag.String("hostname", "0.0.0.0", "The hostname to listen on.")
+	port                = flag.Int("port", 9123, "The port to run the gRPC server on.")
+	jwksUrl             = flag.String("jwks-url", "https://login.microsoftonline.com/common/discovery/v2.0/keys", "The JWKS endpoint for the Azure AD to use.")
+	signerHostName      = flag.String("imds-signer-name", "metadata.azure.com", "The hostname that must be present in the signing certificate from IMDS.")
+	tenantId            = flag.String("tenant-id", "", "Required tenant ID for authentication")
+	allowedClientIds    = flag.String("allowed-client-ids", "", "A comma separated list of allowed client IDs for the service.")
+	tlsCert             = flag.String("tls-cert", "", "TLS certificate path")
+	tlsKey              = flag.String("tls-key", "", "TLS key path")
+	rootCertDir         = flag.String("root-cert-dir", "", "A path to a directory containing root certificates. If not supplied, the system root certificate store will be used.")
+	intermediateCertDir = flag.String("intermediate-cert-dir", "", "A path to a directory containing intermediate certificates to be loaded to the cache.")
+	debug               = flag.Bool("debug", false, "enable debug logging (WILL LOG AUTHENTICATION DATA)")
 )
 
 func main() {
@@ -59,7 +60,7 @@ func main() {
 		grpc.UnaryInterceptor(grpc_auth.UnaryServerInterceptor(server.ValidateToken)),
 	)
 
-	tlsBootstrapServer, err := server.NewServer(log, *signerHostName, *tenantId, *allowedClientIds, *jwksUrl, *attestedDataIntermediateCerts)
+	tlsBootstrapServer, err := server.NewServer(log, *signerHostName, *tenantId, *allowedClientIds, *jwksUrl, *rootCertDir, *intermediateCertDir)
 	if err != nil {
 		log.Fatalf("failed to initialize server: %v", err)
 	}

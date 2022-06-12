@@ -5,6 +5,11 @@ else
 GOBIN=$(shell go env GOBIN)
 endif
 
+REGISTRY_NAME=pahealyaks
+REGISTRY_SUBSCRIPTION=c1089427-83d3-4286-9f35-5af546a6eb67
+REGISTRY_URL=pahealyaks.azurecr.io
+SERVER_IMAGE_NAME=aks-tls-bootstrap-server
+
 # Setting SHELL to bash allows bash commands to be executed by recipes.
 # This is a requirement for 'setup-envtest.sh' in the test target.
 # Options are set to exit when a recipe line exits non-zero or a piped command fails.
@@ -54,10 +59,13 @@ build: fmt vet ## Build manager binary.
 
 .PHONY: docker
 docker: build
-	echo "make some docker build steps here :)"
-	# az acr login -n pahealyaks
-	# docker build -t pahealyaks.azurecr.io/aks-static-gateway-cni:latest .
-	# docker push pahealyaks.azurecr.io/aks-static-gateway-cni:latest
+	docker build -f Dockerfile.server -t $(REGISTRY_URL)/$(SERVER_IMAGE_NAME):latest .
+
+.PHONY: docker-push
+docker-push: docker
+	az acr login -n $(REGISTRY_NAME) --subscription $(REGISTRY_SUBSCRIPTION)
+	docker push $(REGISTRY_URL)/$(SERVER_IMAGE_NAME):latest
+
 
 ##@ Deployment
 
