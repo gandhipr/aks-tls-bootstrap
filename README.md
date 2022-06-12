@@ -22,3 +22,10 @@ Implements the following options:
 - [ ] Add webhooks to validate CSR requests and delete completed tokens
 - [ ] Multi-cloud support (i.e. don't be hardcoded to public cloud
 - [ ] Make server image run as non-root user
+
+## Items to consider
+
+- How to decide if a machine is authorized or not (right now we just look at the identities; how will this work for BYON?)
+  - Limit what subscription a machine can be in to join?
+  - Some sort of nodepool association via RP?
+- How will ARM/K8s permissions be handled?
