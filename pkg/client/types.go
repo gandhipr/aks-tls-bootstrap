@@ -1,5 +1,17 @@
 package client
 
+type TokenResponseJson struct {
+	AccessToken      string `json:"access_token"`
+	RefreshToken     string `json:"refresh_token"`
+	ExpiresIn        string `json:"expires_in"`
+	ExpiresOn        string `json:"expires_on"`
+	NotBefore        string `json:"not_before"`
+	Resource         string `json:"resource"`
+	TokenType        string `json:"token_type"`
+	Error            string `json:"error"`
+	ErrorDescription string `json:"error_description"`
+}
+
 type ExecCredential struct {
 	APIVersion string `json:"apiVersion"`
 	Kind       string `json:"kind"`

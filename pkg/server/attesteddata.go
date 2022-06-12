@@ -1,6 +1,7 @@
 package server
 
 import (
+	"bytes"
 	"crypto/x509"
 	"encoding/base64"
 	"encoding/json"
@@ -26,13 +27,21 @@ func validateAttestedData(log *logrus.Entry, signedAttestedData string, signerHo
 	pkcs7SignerCertificate := p7.GetOnlySigner()
 	log.Infof("Signer: %s", pkcs7SignerCertificate.Subject)
 
-	intermediateCertURL := pkcs7SignerCertificate.IssuingCertificateURL[0]
-	intermediateCert, err := getIntermediateCertificate(log, intermediateCertURL)
-	if err != nil {
-		return nil, fmt.Errorf("failed to retrieve intermediate certificate: %v", err)
+	intermediateCertCached := false
+	for _, cachedSubject := range intermediateCertPool.Subjects() {
+		if bytes.Compare(cachedSubject, pkcs7SignerCertificate.RawIssuer) == 0 {
+			log.Info("intermediate certificate already cached")
+			intermediateCertCached = true
+		}
 	}
-	intermediateCertPool := x509.NewCertPool()
-	intermediateCertPool.AddCert(intermediateCert)
+
+	if !intermediateCertCached {
+		intermediateCert, err := getIntermediateCertificate(log, pkcs7SignerCertificate.IssuingCertificateURL[0])
+		if err != nil {
+			return nil, fmt.Errorf("failed to retrieve intermediate certificate: %v", err)
+		}
+		intermediateCertPool.AddCert(intermediateCert)
+	}
 
 	_, err = pkcs7SignerCertificate.Verify(x509.VerifyOptions{
 		DNSName:       signerHostName,

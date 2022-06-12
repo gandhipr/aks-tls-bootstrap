@@ -13,10 +13,10 @@ Implements the following options:
 - [x] IMDS/attested data querying
 - [x] Attested data validation
 - [x] VM ID validation
-- [ ] move gRPC to HTTPS
-- [ ] AAD auth to service (validate against a list of approved IDs somehow)
-- [ ] Envoy/ALPN
-- [ ] Cache intermediate certificates so we don't have to retrieve them every time
+- [X] add TLS support
+- [X] AAD auth to service (validate against a list of approved IDs somehow)
+- [X] ALPN support on the client (used for Envoy routing)
+- [X] Cache intermediate certificates so we don't have to retrieve them every time
 - [ ] Create bootstrap token secret
 - [ ] Add webhooks to validate CSR requests and delete completed tokens
 - [ ] Multi-cloud support (i.e. don't be hardcoded to public cloud

@@ -7,10 +7,34 @@ import (
 	"net/http"
 )
 
+func GetMSIToken(clientId string) (*TokenResponseJson, error) {
+	url := "http://169.254.169.254/metadata/identity/oauth2/token"
+	queryParameters := map[string]string{
+		"api-version": "2018-02-01",
+		"resource":    "https://management.azure.com/",
+	}
+	if clientId != "" {
+		queryParameters["client_id"] = clientId
+	}
+	data := &TokenResponseJson{}
+
+	err := getImdsData(url, queryParameters, data)
+	if err != nil {
+		return nil, fmt.Errorf("failed to retrieve IMDS MSI token: %v", err)
+	}
+	if data.Error != "" {
+		return nil, fmt.Errorf("failed to retrieve IMDS MSI token (%s): %s", data.Error, data.ErrorDescription)
+	}
+
+	log.WithField("accessToken", data.AccessToken).Debugf("retrieved access token")
+	return data, nil
+}
+
 func GetInstanceData() (*VmssInstanceData, error) {
 	url := "http://169.254.169.254/metadata/instance"
 	queryParameters := map[string]string{
 		"api-version": "2021-05-01",
+		"format":      "json",
 	}
 	data := &VmssInstanceData{}
 
@@ -26,6 +50,7 @@ func GetAttestedData(nonce string) (*VmssAttestedData, error) {
 	url := "http://169.254.169.254/metadata/attested/document"
 	queryParameters := map[string]string{
 		"api-version": "2021-05-01",
+		"format":      "json",
 		"nonce":       nonce,
 	}
 
@@ -49,7 +74,6 @@ func getImdsData(url string, queryParameters map[string]string, responseObject i
 	request.Header.Add("Metadata", "True")
 
 	query := request.URL.Query()
-	query.Add("format", "json")
 	for key := range queryParameters {
 		query.Add(key, queryParameters[key])
 	}
@@ -62,6 +86,8 @@ func getImdsData(url string, queryParameters map[string]string, responseObject i
 
 	defer response.Body.Close()
 	responseBody, _ := ioutil.ReadAll(response.Body)
+
+	log.WithField("responseBody", string(responseBody)).Debug("received IMDS reply")
 
 	err = json.Unmarshal(responseBody, responseObject)
 	if err != nil {

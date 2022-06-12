@@ -2,17 +2,42 @@ package client
 
 import (
 	"context"
+	"crypto/tls"
 	"encoding/json"
 	"fmt"
 
 	pb "github.com/phealy/aks-tls-bootstrap/pkg/proto"
 	"github.com/sirupsen/logrus"
+	"golang.org/x/oauth2"
 	"google.golang.org/grpc"
-	"google.golang.org/grpc/credentials/insecure"
+	"google.golang.org/grpc/credentials"
+	"google.golang.org/grpc/credentials/oauth"
 )
 
-func GetBootstrapToken(log *logrus.Logger, serverAddress string) (string, error) {
-	conn, err := grpc.Dial(serverAddress, grpc.WithTransportCredentials(insecure.NewCredentials()))
+var (
+	log *logrus.Logger
+)
+
+func GetBootstrapToken(mainLogger *logrus.Logger, serverAddress string, clientId string, tlsSkipVerify bool, nextProto string) (string, error) {
+	log = mainLogger
+	log.Info("retrieving IMDS access token")
+	token, err := GetMSIToken(clientId)
+	if err != nil {
+		return "", err
+	}
+
+	perRPC := oauth.NewOauthAccess(&oauth2.Token{
+		AccessToken: token.AccessToken,
+	})
+
+	tlsConfig := &tls.Config{
+		InsecureSkipVerify: tlsSkipVerify,
+	}
+	if nextProto != "" {
+		tlsConfig.NextProtos = []string{nextProto}
+	}
+
+	conn, err := grpc.Dial(serverAddress, grpc.WithTransportCredentials(credentials.NewTLS(tlsConfig)), grpc.WithPerRPCCredentials(perRPC))
 	if err != nil {
 		return "", fmt.Errorf("failed to connect to %s: %v", serverAddress, err)
 	}
