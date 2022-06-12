@@ -15,7 +15,7 @@ var (
 	clientId      = flag.String("client-id", "", "The client ID for the assigned identity to use.")
 	logFormat     = flag.String("log-format", "json", "Log format: json or text, default: json")
 	tlsSkipVerify = flag.Bool("tls-skip-verify", false, "Skip TLS verification (dangerous, for testing only).")
-	nextProto     = flag.String("next-proto", "", "ALPN Next Protocol value to send.")
+	nextProto     = flag.String("next-proto", "aks-tls-bootstrap", "ALPN Next Protocol value to send.")
 	debug         = flag.Bool("debug", false, "enable debug logging (WILL LOG AUTHENTICATION DATA)")
 )
 

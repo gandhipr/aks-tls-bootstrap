@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -29,30 +30,13 @@ func NewServer(mainLog *logrus.Logger, passedSignerHostName string, tenantIdArg 
 	tenantId = tenantIdArg
 
 	if intermediateCertificateDirectory != "" {
-		log.WithField("intermediateCertificateDirectory", intermediateCertificateDirectory).Info("loading intermediate certs to cache")
-		directory, err := os.Open(intermediateCertificateDirectory)
+		err := loadIntermediateCertificates(intermediateCertificateDirectory)
 		if err != nil {
-			return nil, fmt.Errorf("failed to open intermediate certificate directory %s: %v", intermediateCertificateDirectory, err)
-		}
-
-		files, err := directory.ReadDir(0)
-		if err != nil {
-			return nil, fmt.Errorf("failed to read files in intermediate certificate directory %s: %v", intermediateCertificateDirectory, err)
-		}
-
-		for _, file := range files {
-			data, err := os.ReadFile(path.Join(directory.Name(), file.Name()))
-			if err != nil {
-				return nil, fmt.Errorf("failed to read intermediate certificate %s: %v", file.Name(), err)
-			}
-			ok := intermediateCertPool.AppendCertsFromPEM(data)
-			if !ok {
-				return nil, fmt.Errorf("failed to parse PEM contents from %s", file.Name())
-			}
+			return nil, err
 		}
 	}
 
-	log.Info("fetching JWKS keys")
+	log.WithField("jwksUrl", jwksUrl).Info("fetching Azure AD JWKS keys")
 	var err error
 	jwks, err = keyfunc.Get(jwksUrl, keyfunc.Options{
 		RefreshInterval: 1 * time.Hour,
@@ -66,4 +50,43 @@ func NewServer(mainLog *logrus.Logger, passedSignerHostName string, tenantIdArg 
 	go removeExpiredNonces()
 
 	return server, nil
+}
+
+func loadIntermediateCertificates(intermediateCertificateDirectoryArg string) error {
+	intermediateCertificateDirectory, err := filepath.Abs(intermediateCertificateDirectoryArg)
+	if err != nil {
+		return fmt.Errorf("failed to resolve path %s to absolute path: %v", intermediateCertificateDirectoryArg, err)
+	}
+
+	directory, err := os.Open(intermediateCertificateDirectory)
+	if err != nil {
+		return fmt.Errorf("failed to open intermediate certificate directory %s: %v", intermediateCertificateDirectory, err)
+	}
+
+	files, err := directory.ReadDir(0)
+	if err != nil {
+		return fmt.Errorf("failed to read files in intermediate certificate directory %s: %v", intermediateCertificateDirectory, err)
+	}
+
+	loaded := 0
+	for _, file := range files {
+		data, err := os.ReadFile(path.Join(directory.Name(), file.Name()))
+		if err != nil {
+			return fmt.Errorf("failed to read intermediate certificate %s: %v", file.Name(), err)
+		}
+		ok := intermediateCertPool.AppendCertsFromPEM(data)
+		if !ok {
+			// it's not a PEM-format file, maybe it's a DER-format certificate?
+			cert, err := x509.ParseCertificate(data)
+			if err != nil {
+				return fmt.Errorf("failed to parse certificate(s) from %s", path.Join(intermediateCertificateDirectory, file.Name()))
+			}
+			intermediateCertPool.AddCert(cert)
+		}
+		loaded++
+	}
+
+	log.WithField("intermediateCertificateDirectory", intermediateCertificateDirectory).Infof("loaded %d intermediate cert(s) to cache", loaded)
+
+	return nil
 }

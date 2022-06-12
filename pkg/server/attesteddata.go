@@ -30,7 +30,7 @@ func validateAttestedData(log *logrus.Entry, signedAttestedData string, signerHo
 	intermediateCertCached := false
 	for _, cachedSubject := range intermediateCertPool.Subjects() {
 		if bytes.Compare(cachedSubject, pkcs7SignerCertificate.RawIssuer) == 0 {
-			log.Info("intermediate certificate already cached")
+			log.Debug("intermediate certificate already cached")
 			intermediateCertCached = true
 		}
 	}
