@@ -13,7 +13,7 @@ import (
 	"go.mozilla.org/pkcs7"
 )
 
-func validateAttestedData(log *logrus.Entry, signedAttestedData string, signerHostName string) (*AttestedData, error) {
+func (s *TlsBootstrapServer) validateAttestedData(signedAttestedData string, signerHostName string) (*AttestedData, error) {
 	decodedSignature, err := base64.StdEncoding.DecodeString(signedAttestedData)
 	if err != nil {
 		return nil, fmt.Errorf("failed to decode base64 signature: %v", err)
@@ -25,27 +25,30 @@ func validateAttestedData(log *logrus.Entry, signedAttestedData string, signerHo
 	}
 
 	pkcs7SignerCertificate := p7.GetOnlySigner()
-	log.Infof("Signer: %s", pkcs7SignerCertificate.Subject)
+	s.Log.WithFields(logrus.Fields{
+		"subject": pkcs7SignerCertificate.Subject,
+		"issuer":  pkcs7SignerCertificate.Issuer,
+	}).Debug("pkcs7 signature parsed")
 
 	intermediateCertCached := false
-	for _, cachedSubject := range intermediateCertPool.Subjects() {
+	for _, cachedSubject := range s.intermediateCertPool.Subjects() {
 		if bytes.Compare(cachedSubject, pkcs7SignerCertificate.RawIssuer) == 0 {
-			log.Debug("intermediate certificate already cached")
+			s.Log.Debug("intermediate certificate already cached")
 			intermediateCertCached = true
 		}
 	}
 
 	if !intermediateCertCached {
-		intermediateCert, err := getIntermediateCertificate(log, pkcs7SignerCertificate.IssuingCertificateURL[0])
+		intermediateCert, err := s.getIntermediateCertificate(pkcs7SignerCertificate.IssuingCertificateURL[0])
 		if err != nil {
 			return nil, fmt.Errorf("failed to retrieve intermediate certificate: %v", err)
 		}
-		intermediateCertPool.AddCert(intermediateCert)
+		s.intermediateCertPool.AddCert(intermediateCert)
 	}
 
 	_, err = pkcs7SignerCertificate.Verify(x509.VerifyOptions{
 		DNSName:       signerHostName,
-		Intermediates: intermediateCertPool,
+		Intermediates: s.intermediateCertPool,
 		Roots:         nil,
 	})
 	if err != nil {
@@ -61,9 +64,9 @@ func validateAttestedData(log *logrus.Entry, signedAttestedData string, signerHo
 	return attestedData, nil
 }
 
-func getIntermediateCertificate(log *logrus.Entry, url string) (*x509.Certificate, error) {
+func (s *TlsBootstrapServer) getIntermediateCertificate(url string) (*x509.Certificate, error) {
 	client := http.Client{}
-	log.WithField("url", url).Infof("retrieving intermediate certificate")
+	s.Log.WithField("url", url).Infof("retrieving intermediate certificate")
 
 	request, err := http.NewRequest("GET", url, nil)
 	if err != nil {

@@ -10,17 +10,17 @@ import (
 	pb "github.com/phealy/aks-tls-bootstrap/pkg/proto"
 )
 
-func removeExpiredNonces() {
+func (s *TlsBootstrapServer) removeExpiredNonces() {
 	interval := NONCE_EXPIRATION_CHECK_INTERVAL
 
-	log.Infof("starting nonce expiration checker, interval %d second(s)", interval/time.Second)
+	s.Log.Infof("starting nonce expiration checker, interval %d second(s)", interval/time.Second)
 	ticker := time.NewTicker(interval)
 
 	for range ticker.C {
-		for nonce := range nonces {
-			if nonces[nonce].Expiration.Before(time.Now()) {
-				log.Infof("removing expired nonce %s for %s", nonce, nonces[nonce].ResourceId)
-				delete(nonces, nonce)
+		for nonce := range s.requests {
+			if s.requests[nonce].Expiration.Before(time.Now()) {
+				s.Log.Infof("removing expired nonce %s for %s", nonce, s.requests[nonce].ResourceId)
+				delete(s.requests, nonce)
 			}
 		}
 	}
@@ -37,7 +37,7 @@ func generateNonceString() (string, error) {
 }
 
 func (s *TlsBootstrapServer) GetNonce(ctx context.Context, nonceRequest *pb.NonceRequest) (*pb.NonceResponse, error) {
-	requestLog := log.WithField("resourceId", nonceRequest.ResourceId)
+	requestLog := s.Log.WithField("resourceId", nonceRequest.ResourceId)
 	requestLog.Infof("received nonce request")
 
 	var nonceStr string
@@ -49,7 +49,7 @@ func (s *TlsBootstrapServer) GetNonce(ctx context.Context, nonceRequest *pb.Nonc
 		if err != nil {
 			return nil, err
 		}
-		_, exists := nonces[nonceStr]
+		_, exists := s.requests[nonceStr]
 		if !exists {
 			break
 		}
@@ -62,7 +62,7 @@ func (s *TlsBootstrapServer) GetNonce(ctx context.Context, nonceRequest *pb.Nonc
 
 	requestLog = requestLog.WithField("nonce", nonceStr)
 
-	nonces[nonceStr] = &Nonce{
+	s.requests[nonceStr] = &Nonce{
 		Nonce:      nonceStr,
 		ResourceId: nonceRequest.ResourceId,
 		Expiration: time.Now().Add(NONCE_LIFETIME),

@@ -18,8 +18,9 @@ Implements the following options:
 - [X] ALPN support on the client (used for Envoy routing)
 - [X] Cache intermediate certificates so we don't have to retrieve them every time
 - [X] Add option to allow root certificates to only be populated from a given directory (pinning) based on [this blog post](https://techcommunity.microsoft.com/t5/azure-governance-and-management/azure-instance-metadata-service-attested-data-tls-critical/ba-p/2888953)
-- [ ] Create bootstrap token secret
-- [ ] Add webhooks to validate CSR requests and delete completed tokens
+- [X] Migrate functions to be on server struct struct and move variables there
+- [X] Create bootstrap token secret
+- [ ] Add webhook to validate CSR requests
 - [ ] Multi-cloud support (i.e. don't be hardcoded to public cloud
 - [ ] Make server image run as non-root user
 
@@ -28,4 +29,5 @@ Implements the following options:
 - How to decide if a machine is authorized or not (right now we just look at the identities; how will this work for BYON?)
   - Limit what subscription a machine can be in to join?
   - Some sort of nodepool association via RP?
+  - kube-system secret (and -custom) listing allowed identities (this allows customers to create their own list?)
 - How will ARM/K8s permissions be handled?

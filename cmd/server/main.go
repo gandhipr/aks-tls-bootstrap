@@ -4,6 +4,7 @@ import (
 	"flag"
 	"fmt"
 	"net"
+	"os"
 	"strings"
 
 	grpc_auth "github.com/grpc-ecosystem/go-grpc-middleware/auth"
@@ -27,12 +28,15 @@ var (
 	tlsKey              = flag.String("tls-key", "", "TLS key path")
 	rootCertDir         = flag.String("root-cert-dir", "", "A path to a directory containing root certificates. If not supplied, the system root certificate store will be used.")
 	intermediateCertDir = flag.String("intermediate-cert-dir", "", "A path to a directory containing intermediate certificates to be loaded to the cache.")
+	masterUrl           = flag.String("master-url", "", "Master URL for kubernetes-go.")
+	kubeconfigPath      = flag.String("kubeconfig", "", "Path to a kubeconfig file.")
 	debug               = flag.Bool("debug", false, "enable debug logging (WILL LOG AUTHENTICATION DATA)")
 )
 
 func main() {
 	flag.Parse()
 	log.SetReportCaller(true)
+	log.SetOutput(os.Stdout)
 
 	switch strings.ToLower(*logFormat) {
 	case "text":
@@ -54,13 +58,25 @@ func main() {
 		log.Fatalf("failed to initialize TLS certificate: %v", err)
 	}
 
+	s := &server.TlsBootstrapServer{
+		Log:                  logrus.NewEntry(log),
+		AllowedClientIds:     strings.Split(*allowedClientIds, ","),
+		IntermediateCertPath: *intermediateCertDir,
+		JwksUrl:              *jwksUrl,
+		RootCertPath:         *rootCertDir,
+		SignerHostName:       *signerHostName,
+		TenantId:             *tenantId,
+		MasterUrl:            *masterUrl,
+		KubeconfigPath:       *kubeconfigPath,
+	}
+
 	grpcServer := grpc.NewServer(
 		grpc.Creds(tls),
-		grpc.StreamInterceptor(grpc_auth.StreamServerInterceptor(server.ValidateToken)),
-		grpc.UnaryInterceptor(grpc_auth.UnaryServerInterceptor(server.ValidateToken)),
+		grpc.StreamInterceptor(grpc_auth.StreamServerInterceptor(s.ValidateToken)),
+		grpc.UnaryInterceptor(grpc_auth.UnaryServerInterceptor(s.ValidateToken)),
 	)
 
-	tlsBootstrapServer, err := server.NewServer(log, *signerHostName, *tenantId, *allowedClientIds, *jwksUrl, *rootCertDir, *intermediateCertDir)
+	tlsBootstrapServer, err := server.NewServer(s)
 	if err != nil {
 		log.Fatalf("failed to initialize server: %v", err)
 	}

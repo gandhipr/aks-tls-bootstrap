@@ -3,6 +3,7 @@ package server
 import (
 	"context"
 	"fmt"
+	"reflect"
 
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore/arm"
 	_ "github.com/Azure/azure-sdk-for-go/sdk/azcore/to"
@@ -12,13 +13,13 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-func validateVmId(log *logrus.Entry, vmId string, resourceIdString string) error {
+func (s *TlsBootstrapServer) validateVmId(vmId string, nonce string) error {
 	credential, err := azidentity.NewDefaultAzureCredential(nil)
 	if err != nil {
 		return fmt.Errorf("failed to get az identity")
 	}
 
-	resourceId, err := arm.ParseResourceID(resourceIdString)
+	resourceId, err := arm.ParseResourceID(s.requests[nonce].ResourceId)
 	if err != nil {
 		return fmt.Errorf("failed to parse resourceId")
 	}
@@ -39,7 +40,25 @@ func validateVmId(log *logrus.Entry, vmId string, resourceIdString string) error
 			return fmt.Errorf("supplied VmId %s does not match VmId %s retrieved from ARM", vmId, *vm.Properties.VMID)
 		}
 
-		log.Infof("supplied VmId %s matches VmId %s retrieved from ARM", vmId, *vm.Properties.VMID)
+		vmName := ""
+		vmReflect := reflect.TypeOf(*vm.Properties)
+		osProfile, ok := vmReflect.FieldByName("OSProfile")
+		if ok {
+			osProfileReflect := reflect.TypeOf(osProfile)
+			_, ok := osProfileReflect.FieldByName("ComputerName")
+			if ok {
+				vmName = *vm.Properties.OSProfile.ComputerName
+			} else {
+				vmName = *vm.Name
+			}
+		}
+
+		s.requests[nonce].VmName = vmName
+
+		s.Log.WithFields(logrus.Fields{
+			"vmId":   *vm.Properties.VMID,
+			"vmName": vmName,
+		}).Infof("supplied VmId %s matches VmId retrieved from ARM", vmId)
 	case "Microsoft.Compute/virtualMachineScaleSets/virtualMachines":
 		client, err := armcompute.NewVirtualMachineScaleSetVMsClient(resourceId.SubscriptionID, credential, nil)
 		if err != nil {
@@ -55,7 +74,25 @@ func validateVmId(log *logrus.Entry, vmId string, resourceIdString string) error
 			return fmt.Errorf("supplied VmId %s does not match VmId %s retrieved from ARM", vmId, *vm.Properties.VMID)
 		}
 
-		log.Infof("supplied VmId %s matches VmId %s retrieved from ARM", vmId, *vm.Properties.VMID)
+		vmName := ""
+		vmReflect := reflect.TypeOf(*vm.Properties)
+		osProfile, ok := vmReflect.FieldByName("OSProfile")
+		if ok {
+			osProfileReflect := reflect.TypeOf(osProfile)
+			_, ok := osProfileReflect.FieldByName("ComputerName")
+			if ok {
+				vmName = *vm.Properties.OSProfile.ComputerName
+			} else {
+				vmName = *vm.Name
+			}
+		}
+
+		s.requests[nonce].VmName = vmName
+
+		s.Log.WithFields(logrus.Fields{
+			"vmId":   *vm.Properties.VMID,
+			"vmName": vmName,
+		}).Infof("supplied VmId %s matches VmId retrieved from ARM", vmId)
 	default:
 		return fmt.Errorf("unknown resource type: %s/%s", resourceId.ResourceType.Namespace, resourceId.ResourceType.Type)
 	}

@@ -1,12 +1,39 @@
 package server
 
 import (
+	"crypto/tls"
+	"crypto/x509"
+	"net/http"
 	"time"
 
 	"github.com/MicahParks/keyfunc"
 	"github.com/golang-jwt/jwt"
 	pb "github.com/phealy/aks-tls-bootstrap/pkg/proto"
+	"github.com/sirupsen/logrus"
+	"k8s.io/client-go/kubernetes"
+	coreV1Types "k8s.io/client-go/kubernetes/typed/core/v1"
 )
+
+type TlsBootstrapServer struct {
+	SignerHostName          string
+	AllowedClientIds        []string
+	requests                map[string]*Nonce
+	jwksKeyfunc             *keyfunc.JWKS
+	JwksUrl                 string
+	Log                     *logrus.Entry
+	MasterUrl               string
+	KubeconfigPath          string
+	k8sClientSet            *kubernetes.Clientset
+	kubeSystemSecretsClient coreV1Types.SecretInterface
+	RootCertPath            string
+	IntermediateCertPath    string
+	rootCertPool            *x509.CertPool
+	intermediateCertPool    *x509.CertPool
+	TenantId                string
+	tlsConfig               *tls.Config
+	httpClient              *http.Client
+	pb.UnimplementedAKSBootstrapTokenRequestServer
+}
 
 type AzureADTokenClaims struct {
 	ClaimNames struct {
@@ -53,13 +80,7 @@ type Nonce struct {
 	Nonce      string
 	Expiration time.Time
 	ResourceId string
-}
-
-type TlsBootstrapServer struct {
-	signerHostName   string
-	allowedClientIds []string
-	jwksKeyfunc      *keyfunc.JWKS
-	pb.UnimplementedAKSBootstrapTokenRequestServer
+	VmName     string
 }
 
 type AttestedDataPlan struct {
