@@ -11,7 +11,7 @@ import (
 func (s *TlsBootstrapServer) loadRootCertificates() error {
 	s.rootCertPool = x509.NewCertPool()
 	if s.RootCertPath == "" {
-		log.Info("loading root certificates from system root certificate pool")
+		s.Log.Info("loading root certificates from system root certificate pool")
 		var err error
 		s.rootCertPool, err = x509.SystemCertPool()
 		if err != nil {

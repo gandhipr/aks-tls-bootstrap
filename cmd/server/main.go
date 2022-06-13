@@ -49,13 +49,18 @@ func main() {
 		log.SetLevel(logrus.DebugLevel)
 	}
 
-	log.WithFields(logrus.Fields{
-		"tls-cert": *tlsCert,
-		"tls-key":  *tlsKey,
-	}).Infof("fetching TLS certificate")
-	tls, err := credentials.NewServerTLSFromFile(*tlsCert, *tlsKey)
-	if err != nil {
-		log.Fatalf("failed to initialize TLS certificate: %v", err)
+	var tlsCreds grpc.ServerOption = nil
+	if *tlsCert != "" {
+		log.WithFields(logrus.Fields{
+			"tls-cert": *tlsCert,
+			"tls-key":  *tlsKey,
+		}).Infof("fetching TLS certificate")
+		tls, err := credentials.NewServerTLSFromFile(*tlsCert, *tlsKey)
+		if err != nil {
+			log.Fatalf("failed to initialize TLS certificate: %v", err)
+		}
+
+		tlsCreds = grpc.Creds(tls)
 	}
 
 	s := &server.TlsBootstrapServer{
@@ -70,11 +75,19 @@ func main() {
 		KubeconfigPath:       *kubeconfigPath,
 	}
 
-	grpcServer := grpc.NewServer(
-		grpc.Creds(tls),
-		grpc.StreamInterceptor(grpc_auth.StreamServerInterceptor(s.ValidateToken)),
-		grpc.UnaryInterceptor(grpc_auth.UnaryServerInterceptor(s.ValidateToken)),
-	)
+	var grpcServer *grpc.Server
+	if tlsCreds != nil {
+		grpcServer = grpc.NewServer(
+			tlsCreds,
+			grpc.StreamInterceptor(grpc_auth.StreamServerInterceptor(s.ValidateToken)),
+			grpc.UnaryInterceptor(grpc_auth.UnaryServerInterceptor(s.ValidateToken)),
+		)
+	} else {
+		grpcServer = grpc.NewServer(
+			grpc.StreamInterceptor(grpc_auth.StreamServerInterceptor(s.ValidateToken)),
+			grpc.UnaryInterceptor(grpc_auth.UnaryServerInterceptor(s.ValidateToken)),
+		)
+	}
 
 	tlsBootstrapServer, err := server.NewServer(s)
 	if err != nil {
