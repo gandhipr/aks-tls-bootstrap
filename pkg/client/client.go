@@ -30,19 +30,19 @@ func GetBootstrapToken(mainLogger *logrus.Logger, clientId string, nextProto str
 		return "", fmt.Errorf("KUBERNETES_EXEC_INFO variable not found")
 	}
 
-	execInfo := &ExecCredential{}
-	err := json.Unmarshal([]byte(kubernetesExecInfoVar), execInfo)
+	execCredential := &ExecCredential{}
+	err := json.Unmarshal([]byte(kubernetesExecInfoVar), execCredential)
 	if err != nil {
 		return "", err
 	}
 
-	serverUrl, err := url.Parse(execInfo.Spec.Cluster.Server)
+	serverUrl, err := url.Parse(execCredential.Spec.Cluster.Server)
 	if err != nil {
 		return "", fmt.Errorf("failed to parse server URL: %v", err)
 	}
 	server := serverUrl.Hostname() + ":" + serverUrl.Port()
 
-	pemCAs, err := base64.StdEncoding.DecodeString(execInfo.Spec.Cluster.CertificateAuthorityData)
+	pemCAs, err := base64.StdEncoding.DecodeString(execCredential.Spec.Cluster.CertificateAuthorityData)
 	if err != nil {
 		return "", fmt.Errorf("failed to decode base64 cluster certificates")
 	}
@@ -55,7 +55,7 @@ func GetBootstrapToken(mainLogger *logrus.Logger, clientId string, nextProto str
 
 	tlsConfig := &tls.Config{
 		RootCAs:            tlsRootStore,
-		InsecureSkipVerify: execInfo.Spec.Cluster.InsecureSkipTlsVerify,
+		InsecureSkipVerify: execCredential.Spec.Cluster.InsecureSkipTlsVerify,
 	}
 	if nextProto != "" {
 		tlsConfig.NextProtos = []string{nextProto, "h2"}
@@ -75,7 +75,7 @@ func GetBootstrapToken(mainLogger *logrus.Logger, clientId string, nextProto str
 		grpc.WithTransportCredentials(credentials.NewTLS(tlsConfig)),
 		grpc.WithPerRPCCredentials(perRPC))
 	if err != nil {
-		return "", fmt.Errorf("failed to connect to %s: %v", execInfo.Spec.Cluster.Server, err)
+		return "", fmt.Errorf("failed to connect to %s: %v", execCredential.Spec.Cluster.Server, err)
 	}
 	defer conn.Close()
 
@@ -115,7 +115,7 @@ func GetBootstrapToken(mainLogger *logrus.Logger, clientId string, nextProto str
 	}
 	log.Info("received token reply")
 
-	execCredential := &ExecCredential{}
+	//execCredential := &ExecCredential{}
 	execCredential.APIVersion = "client.authentication.k8s.io/v1"
 	execCredential.Kind = "ExecCredential"
 	execCredential.Status.Token = tokenReply.Token
