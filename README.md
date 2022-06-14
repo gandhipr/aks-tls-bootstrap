@@ -20,9 +20,10 @@ Implements the following options:
 - [X] Add option to allow root certificates to only be populated from a given directory (pinning) based on [this blog post](https://techcommunity.microsoft.com/t5/azure-governance-and-management/azure-instance-metadata-service-attested-data-tls-critical/ba-p/2888953)
 - [X] Migrate functions to be on server struct struct and move variables there
 - [X] Create bootstrap token secret
-- [ ] Set up authentication to AAD for system
+- [X] Support service principal systems as well as MSI/UAMI systems
+- [ ] Set up authentication to AAD for system (demo uses cloud-provider's credentials)
 - [ ] Add webhook to validate CSR requests
-- [ ] Multi-cloud support (i.e. don't be hardcoded to public cloud
+- [ ] Multi-cloud support (i.e. don't be hardcoded to public cloud)
 - [ ] Make server image run as non-root user
 - [ ] Create a script to request and sign a TLS cert for the service name so that we don't have to use the API server certificate
 
