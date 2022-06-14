@@ -3,8 +3,12 @@ package client
 import (
 	"context"
 	"crypto/tls"
+	"crypto/x509"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"net/url"
+	"os"
 
 	pb "github.com/phealy/aks-tls-bootstrap/pkg/proto"
 	"github.com/sirupsen/logrus"
@@ -18,8 +22,45 @@ var (
 	log *logrus.Logger
 )
 
-func GetBootstrapToken(mainLogger *logrus.Logger, serverAddress string, clientId string, tlsSkipVerify bool, nextProto string) (string, error) {
+func GetBootstrapToken(mainLogger *logrus.Logger, clientId string, nextProto string) (string, error) {
 	log = mainLogger
+	log.Info("parsing KUBERNETES_EXEC_INFO variable")
+	kubernetesExecInfoVar := os.Getenv("KUBERNETES_EXEC_INFO")
+	if kubernetesExecInfoVar == "" {
+		return "", fmt.Errorf("KUBERNETES_EXEC_INFO variable not found")
+	}
+
+	execInfo := &ExecCredential{}
+	err := json.Unmarshal([]byte(kubernetesExecInfoVar), execInfo)
+	if err != nil {
+		return "", err
+	}
+
+	serverUrl, err := url.Parse(execInfo.Spec.Cluster.Server)
+	if err != nil {
+		return "", fmt.Errorf("failed to parse server URL: %v", err)
+	}
+	server := serverUrl.Hostname() + ":" + serverUrl.Port()
+
+	pemCAs, err := base64.StdEncoding.DecodeString(execInfo.Spec.Cluster.CertificateAuthorityData)
+	if err != nil {
+		return "", fmt.Errorf("failed to decode base64 cluster certificates")
+	}
+
+	tlsRootStore := x509.NewCertPool()
+	ok := tlsRootStore.AppendCertsFromPEM(pemCAs)
+	if !ok {
+		return "", fmt.Errorf("failed to load cluster root CA(s)")
+	}
+
+	tlsConfig := &tls.Config{
+		RootCAs:            tlsRootStore,
+		InsecureSkipVerify: execInfo.Spec.Cluster.InsecureSkipTlsVerify,
+	}
+	if nextProto != "" {
+		tlsConfig.NextProtos = []string{nextProto, "h2"}
+	}
+
 	log.Info("retrieving IMDS access token")
 	token, err := GetMSIToken(clientId)
 	if err != nil {
@@ -30,16 +71,11 @@ func GetBootstrapToken(mainLogger *logrus.Logger, serverAddress string, clientId
 		AccessToken: token.AccessToken,
 	})
 
-	tlsConfig := &tls.Config{
-		InsecureSkipVerify: tlsSkipVerify,
-	}
-	if nextProto != "" {
-		tlsConfig.NextProtos = []string{nextProto}
-	}
-
-	conn, err := grpc.Dial(serverAddress, grpc.WithTransportCredentials(credentials.NewTLS(tlsConfig)), grpc.WithPerRPCCredentials(perRPC))
+	conn, err := grpc.Dial(server,
+		grpc.WithTransportCredentials(credentials.NewTLS(tlsConfig)),
+		grpc.WithPerRPCCredentials(perRPC))
 	if err != nil {
-		return "", fmt.Errorf("failed to connect to %s: %v", serverAddress, err)
+		return "", fmt.Errorf("failed to connect to %s: %v", execInfo.Spec.Cluster.Server, err)
 	}
 	defer conn.Close()
 
@@ -51,7 +87,7 @@ func GetBootstrapToken(mainLogger *logrus.Logger, serverAddress string, clientId
 		return "", fmt.Errorf("failed to retrieve instance metadata from IMDS: %v", err)
 	}
 
-	log.Infof("retrieving nonce from TLS bootstrap token server at %s", serverAddress)
+	log.Infof("retrieving nonce from TLS bootstrap token server at %s", server)
 	nonceRequest := pb.NonceRequest{
 		ResourceId: instanceData.Compute.ResourceID,
 	}
@@ -83,6 +119,7 @@ func GetBootstrapToken(mainLogger *logrus.Logger, serverAddress string, clientId
 	execCredential.APIVersion = "client.authentication.k8s.io/v1"
 	execCredential.Kind = "ExecCredential"
 	execCredential.Status.Token = tokenReply.Token
+	execCredential.Status.ExpirationTimestamp = tokenReply.Expiration
 
 	execCredentialBytes, err := json.Marshal(execCredential)
 	if err != nil {

@@ -1,5 +1,5 @@
 FROM mcr.microsoft.com/cbl-mariner/base/core:2.0
-RUN tdnf install -y azure-cli \
+RUN tdnf install -y azure-cli bind-utils iproute tcpdump \
     && tdnf clean all
 WORKDIR /opt/app/aks-tls-bootstrap
 COPY bin/tls-bootstrap-server tls-bootstrap-server

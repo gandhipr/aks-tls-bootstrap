@@ -23,6 +23,7 @@ Implements the following options:
 - [ ] Add webhook to validate CSR requests
 - [ ] Multi-cloud support (i.e. don't be hardcoded to public cloud
 - [ ] Make server image run as non-root user
+- [ ] Create a script to request and sign a TLS cert for the service name so that we don't have to use the API server certificate
 
 ## Items to consider
 

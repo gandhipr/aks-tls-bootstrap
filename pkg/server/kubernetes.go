@@ -34,12 +34,12 @@ func (s *TlsBootstrapServer) createBootstrapToken(vmName string) (string, string
 	return bootstrapToken, bootstrapTokenSecret, nil
 }
 
-func (s *TlsBootstrapServer) createBootstrapTokenSecret(vmName string) (string, error) {
+func (s *TlsBootstrapServer) createBootstrapTokenSecret(vmName string) (string, string, error) {
 	expirationDate := time.Now().UTC().Add(TOKEN_LIFETIME).Format(time.RFC3339)
 
 	bootstrapToken, bootstrapTokenSecret, err := s.createBootstrapToken(vmName)
 	if err != nil {
-		return "", fmt.Errorf("failed to generate bootstrap token secret")
+		return "", "", fmt.Errorf("failed to generate bootstrap token secret")
 	}
 
 	secret := *&coreV1.Secret{
@@ -62,10 +62,10 @@ func (s *TlsBootstrapServer) createBootstrapTokenSecret(vmName string) (string, 
 
 	_, err = s.kubeSystemSecretsClient.Create(context.Background(), &secret, metaV1.CreateOptions{})
 	if err != nil {
-		return "", fmt.Errorf("failed to create secret in kube-system namespace: %v", err)
+		return "", "", fmt.Errorf("failed to create secret in kube-system namespace: %v", err)
 	}
 
-	return bootstrapToken + "." + bootstrapTokenSecret, nil
+	return bootstrapToken + "." + bootstrapTokenSecret, expirationDate, nil
 }
 
 func (s *TlsBootstrapServer) initializeClient() error {

@@ -10,13 +10,11 @@ import (
 )
 
 var (
-	log           = logrus.New()
-	serverAddress = flag.String("server", "localhost:9123", "The hostname and port to connect to.")
-	clientId      = flag.String("client-id", "", "The client ID for the assigned identity to use.")
-	logFormat     = flag.String("log-format", "json", "Log format: json or text, default: json")
-	tlsSkipVerify = flag.Bool("tls-skip-verify", false, "Skip TLS verification (dangerous, for testing only).")
-	nextProto     = flag.String("next-proto", "aks-tls-bootstrap", "ALPN Next Protocol value to send.")
-	debug         = flag.Bool("debug", false, "enable debug logging (WILL LOG AUTHENTICATION DATA)")
+	log       = logrus.New()
+	clientId  = flag.String("client-id", "", "The client ID for the assigned identity to use.")
+	logFormat = flag.String("log-format", "json", "Log format: json or text, default: json")
+	nextProto = flag.String("next-proto", "aks-tls-bootstrap", "ALPN Next Protocol value to send.")
+	debug     = flag.Bool("debug", false, "enable debug logging (WILL LOG AUTHENTICATION DATA)")
 )
 
 func main() {
@@ -34,7 +32,7 @@ func main() {
 		log.SetLevel(logrus.DebugLevel)
 	}
 
-	token, err := client.GetBootstrapToken(log, *serverAddress, *clientId, *tlsSkipVerify, *nextProto)
+	token, err := client.GetBootstrapToken(log, *clientId, *nextProto)
 	if err != nil {
 		log.Fatalf("Failed to retrieve bootstrap token: %v", err)
 	}

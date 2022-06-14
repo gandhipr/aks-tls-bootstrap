@@ -15,9 +15,23 @@ type TokenResponseJson struct {
 type ExecCredential struct {
 	APIVersion string `json:"apiVersion"`
 	Kind       string `json:"kind"`
-	Status     struct {
-		Token string `json:"token"`
-	} `json:"status"`
+	Spec       struct {
+		Cluster struct {
+			CertificateAuthorityData string      `json:"certificate-authority-data,omitempty"`
+			Config                   interface{} `json:"config,omitempty"`
+			InsecureSkipTlsVerify    bool        `json:"insecure-skip-tls-verify,omitempty"`
+			ProxyUrl                 string      `json:"proxy-url,omitempty"`
+			Server                   string      `json:"server,omitempty"`
+			TlsServerName            string      `json:"tls-server-name,omitempty"`
+		} `json:"cluster,omitempty"`
+		Interactive bool `json:"interactive,omitempty"`
+	} `json:"spec,omitempty"`
+	Status struct {
+		ClientCertificateData string `json:"clientCertificateData,omitempty"`
+		ClientKeyData         string `json:"clientKeyData,omitempty"`
+		ExpirationTimestamp   string `json:"expirationTimestamp,omitempty,omitempty"`
+		Token                 string `json:"token,omitempty"`
+	} `json:"status,omitempty"`
 }
 
 type VmssInstanceData struct {

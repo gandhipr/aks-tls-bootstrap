@@ -42,7 +42,7 @@ func (s *TlsBootstrapServer) GetToken(ctx context.Context, tokenRequest *pb.Toke
 		return nil, err
 	}
 
-	bootstrapTokenSecret, err := s.createBootstrapTokenSecret(s.requests[tokenRequest.Nonce].VmName)
+	bootstrapTokenSecret, expiration, err := s.createBootstrapTokenSecret(s.requests[tokenRequest.Nonce].VmName)
 	if err != nil {
 		requestLog.Error(err)
 		return nil, err
@@ -50,6 +50,7 @@ func (s *TlsBootstrapServer) GetToken(ctx context.Context, tokenRequest *pb.Toke
 
 	response := &pb.TokenResponse{}
 	response.Token = bootstrapTokenSecret
+	response.Expiration = expiration
 
 	delete(s.requests, tokenRequest.Nonce)
 	requestLog.Info("returning token and flushing nonce from cache")
