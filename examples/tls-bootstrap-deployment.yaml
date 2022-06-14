@@ -1,0 +1,73 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: tls-bootstrap
+  name: tls-bootstrap
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: tls-bootstrap
+  template:
+    metadata:
+      labels:
+        app: tls-bootstrap
+    spec:
+      containers:
+      - name: aks-tls-bootstrap-server
+        command:
+        - /opt/app/aks-tls-bootstrap/tls-bootstrap-server
+        - -hostname
+        - 0.0.0.0
+        - -port
+        - "443"
+        - -tls-cert
+        - /tls/apiserver.pem
+        - -tls-key
+        - /tls/apiserver-key.pem
+        - -root-cert-dir
+        - /opt/app/aks-tls-bootstrap/certs/roots
+        - -intermediate-cert-dir
+        - /opt/app/aks-tls-bootstrap/certs/intermediates
+        - -tenant-id
+        - $AZURE_TENANT_ID
+        - -allowed-client-ids
+        - 8ff738a5-abcd-4864-a162-6c18f7c9cbd9,13bec9da-7208-4aa0-8fc7-47b25e26ff5d,561d2f6f-3ead-41c8-ad24-08bba734b610,524b4a88-e221-4d1c-a31f-d628e3f4b592
+        - -kubeconfig
+        - /k8s/kubeconfig
+        - -debug
+        env:
+        - name: AZURE_CLIENT_ID
+          valueFrom:
+            secretKeyRef:
+              key: AZURE_CLIENT_ID
+              name: tls-bootstrap-aad-client
+        - name: AZURE_CLIENT_SECRET
+          valueFrom:
+            secretKeyRef:
+              key: AZURE_CLIENT_SECRET
+              name: tls-bootstrap-aad-client
+        - name: AZURE_TENANT_ID
+          valueFrom:
+            secretKeyRef:
+              key: AZURE_TENANT_ID
+              name: tls-bootstrap-aad-client
+        image: pahealyaks.azurecr.io/aks-tls-bootstrap-server:latest
+        imagePullPolicy: Always
+        volumeMounts:
+        - mountPath: /tls
+          name: kube-apiserver-ssl
+          readOnly: true
+        - mountPath: /k8s
+          name: tls-bootstrap-kubeconfig
+          readOnly: true
+      volumes:
+      - name: kube-apiserver-ssl
+        secret:
+          defaultMode: 420
+          secretName: kube-apiserver-ssl
+      - name: tls-bootstrap-kubeconfig
+        secret:
+          defaultMode: 420
+          secretName: tls-bootstrap-kubeconfig
