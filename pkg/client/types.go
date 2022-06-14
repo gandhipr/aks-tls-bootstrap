@@ -1,5 +1,12 @@
 package client
 
+type kubeletAzureJson struct {
+	ClientId               string `json:"aadClientId"`
+	ClientSecret           string `json:"aadClientSecret"`
+	TenantId               string `json:"tenantId"`
+	UserAssignedIdentityID string `json:"userAssignedIdentityID"`
+}
+
 type TokenResponseJson struct {
 	AccessToken      string `json:"access_token"`
 	RefreshToken     string `json:"refresh_token"`

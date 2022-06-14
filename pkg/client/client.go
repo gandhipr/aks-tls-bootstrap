@@ -61,14 +61,14 @@ func GetBootstrapToken(mainLogger *logrus.Logger, clientId string, nextProto str
 		tlsConfig.NextProtos = []string{nextProto, "h2"}
 	}
 
-	log.Info("retrieving IMDS access token")
-	token, err := GetMSIToken(clientId)
+	log.Info("retrieving Azure AD token")
+	token, err := GetAuthToken(log, clientId)
 	if err != nil {
 		return "", err
 	}
 
 	perRPC := oauth.NewOauthAccess(&oauth2.Token{
-		AccessToken: token.AccessToken,
+		AccessToken: token,
 	})
 
 	conn, err := grpc.Dial(server,
