@@ -59,7 +59,7 @@ build: fmt vet ## Build manager binary.
 
 .PHONY: docker
 docker: build
-	docker build -f Dockerfile.server -t $(REGISTRY_URL)/$(SERVER_IMAGE_NAME):latest .
+	docker build -t $(REGISTRY_URL)/$(SERVER_IMAGE_NAME):latest .
 
 .PHONY: docker-push
 docker-push: docker

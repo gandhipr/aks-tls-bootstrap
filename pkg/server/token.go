@@ -35,6 +35,7 @@ func (s *TlsBootstrapServer) GetToken(ctx context.Context, tokenRequest *pb.Toke
 		"vmId":       attestedData.VmId,
 	})
 
+	requestLog.Info("validating VM ID against ARM")
 	err = s.validateVmId(attestedData.VmId, tokenRequest.Nonce)
 	if err != nil {
 		err = fmt.Errorf("failed to validate VM ID: %v", err)

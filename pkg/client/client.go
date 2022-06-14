@@ -24,7 +24,7 @@ var (
 
 func GetBootstrapToken(mainLogger *logrus.Logger, clientId string, nextProto string) (string, error) {
 	log = mainLogger
-	log.Info("parsing KUBERNETES_EXEC_INFO variable")
+	log.WithField("KUBERNETES_EXEC_INFO", os.Getenv("KUBERNETES_EXEC_INFO")).Debug("parsing KUBERNETES_EXEC_INFO variable")
 	kubernetesExecInfoVar := os.Getenv("KUBERNETES_EXEC_INFO")
 	if kubernetesExecInfoVar == "" {
 		return "", fmt.Errorf("KUBERNETES_EXEC_INFO variable not found")
