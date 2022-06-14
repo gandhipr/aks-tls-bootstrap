@@ -12,7 +12,7 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-func (s *TlsBootstrapServer) validateVmId(vmId string, nonce string) error {
+func (s *TlsBootstrapServer) validateVmId(nonce string) error {
 	credential, err := azidentity.NewDefaultAzureCredential(nil)
 	if err != nil {
 		return fmt.Errorf("failed to get az identity")
@@ -39,15 +39,15 @@ func (s *TlsBootstrapServer) validateVmId(vmId string, nonce string) error {
 
 	properties := resource.Properties.(map[string]interface{})
 
-	if vmId != properties["vmId"].(string) {
-		return fmt.Errorf("supplied VmId %s does not match VmId %s retrieved from ARM", vmId, properties["vmId"].(string))
+	if s.requests[nonce].VmId != properties["vmId"].(string) {
+		return fmt.Errorf("supplied VmId %s does not match VmId %s retrieved from ARM", s.requests[nonce].VmId, properties["vmId"].(string))
 	}
 
 	var vmName string
 	_, hasOsProfile := properties["osProfile"]
 	if hasOsProfile {
 		osProfile := properties["osProfile"].(map[string]interface{})
-		_, hasComputerName := properties["computerName"]
+		_, hasComputerName := osProfile["computerName"]
 		if hasComputerName {
 			vmName = osProfile["computerName"].(string)
 		} else {
@@ -57,10 +57,12 @@ func (s *TlsBootstrapServer) validateVmId(vmId string, nonce string) error {
 		vmName = *resource.Name
 	}
 	s.Log.WithFields(logrus.Fields{
-		"vmIdFromClient": vmId,
+		"vmIdFromClient": s.requests[nonce].VmId,
 		"vmIdFromARM":    properties["vmId"].(string),
 		"vmName":         vmName,
 	}).Info("VmId from client matches VmId retrieved from ARM")
+
+	s.requests[nonce].VmName = vmName
 
 	return nil
 }

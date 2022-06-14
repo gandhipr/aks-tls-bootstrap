@@ -29,14 +29,14 @@ func (s *TlsBootstrapServer) GetToken(ctx context.Context, tokenRequest *pb.Toke
 		requestLog.Error(err)
 		return nil, err
 	}
-	nonce := s.requests[tokenRequest.Nonce]
 	requestLog = requestLog.WithFields(logrus.Fields{
-		"resourceId": nonce.ResourceId,
+		"resourceId": s.requests[tokenRequest.Nonce].ResourceId,
 		"vmId":       attestedData.VmId,
 	})
 
+	s.requests[tokenRequest.Nonce].VmId = attestedData.VmId
 	requestLog.Info("validating VM ID against ARM")
-	err = s.validateVmId(attestedData.VmId, tokenRequest.Nonce)
+	err = s.validateVmId(tokenRequest.Nonce)
 	if err != nil {
 		err = fmt.Errorf("failed to validate VM ID: %v", err)
 		requestLog.Error(err)

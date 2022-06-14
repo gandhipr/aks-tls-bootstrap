@@ -41,7 +41,7 @@ func NewServer(s *TlsBootstrapServer) (*TlsBootstrapServer, error) {
 		},
 	}
 
-	s.requests = make(map[string]*Nonce)
+	s.requests = make(map[string]*Request)
 
 	s.Log.WithField("jwksUrl", s.JwksUrl).Info("fetching Azure AD JWKS keys")
 	jwks, err = keyfunc.Get(s.JwksUrl, keyfunc.Options{

@@ -62,7 +62,7 @@ func (s *TlsBootstrapServer) GetNonce(ctx context.Context, nonceRequest *pb.Nonc
 
 	requestLog = requestLog.WithField("nonce", nonceStr)
 
-	s.requests[nonceStr] = &Nonce{
+	s.requests[nonceStr] = &Request{
 		Nonce:      nonceStr,
 		ResourceId: nonceRequest.ResourceId,
 		Expiration: time.Now().Add(NONCE_LIFETIME),

@@ -17,7 +17,7 @@ import (
 type TlsBootstrapServer struct {
 	SignerHostName          string
 	AllowedClientIds        []string
-	requests                map[string]*Nonce
+	requests                map[string]*Request
 	jwksKeyfunc             *keyfunc.JWKS
 	JwksUrl                 string
 	Log                     *logrus.Entry
@@ -76,30 +76,27 @@ type AzureADTokenClaims struct {
 	jwt.StandardClaims
 }
 
-type Nonce struct {
+type Request struct {
 	Nonce      string
 	Expiration time.Time
 	ResourceId string
+	VmId       string
 	VmName     string
 }
 
-type AttestedDataPlan struct {
-	Name      string `json:"name,omitempty"`
-	Product   string `json:"product,omitempty"`
-	Publisher string `json:"publisher,omitempty"`
-}
-
-type AttestedDataTimeStamp struct {
-	CreatedOn string `json:"createdOn"`
-	ExpiresOn string `json:"expiresOn"`
-}
-
 type AttestedData struct {
-	LicenseType    string                `json:"licenseType,omitempty"`
-	Nonce          string                `json:",omitempty"`
-	Plan           AttestedDataPlan      `json:",omitempty"`
-	SubscriptionId string                `json:"subscriptionId"`
-	Sku            string                `json:"sku,omitempty"`
-	Timestamp      AttestedDataTimeStamp `json:"timestamp"`
-	VmId           string                `json:"vmId"`
+	LicenseType string `json:"licenseType,omitempty"`
+	Nonce       string `json:",omitempty"`
+	Plan        struct {
+		Name      string `json:"name,omitempty"`
+		Product   string `json:"product,omitempty"`
+		Publisher string `json:"publisher,omitempty"`
+	} `json:",omitempty"`
+	SubscriptionId string `json:"subscriptionId"`
+	Sku            string `json:"sku,omitempty"`
+	Timestamp      struct {
+		CreatedOn string `json:"createdOn"`
+		ExpiresOn string `json:"expiresOn"`
+	} `json:"timestamp"`
+	VmId string `json:"vmId"`
 }
