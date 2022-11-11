@@ -56,6 +56,7 @@ protobuf:
 build: fmt vet ## Build manager binary.
 	go build -o bin/tls-bootstrap-client cmd/client/main.go
 	go build -o bin/tls-bootstrap-server cmd/server/main.go
+	go build -o bin/tls-bootstrap-approver cmd/approver/main.go
 
 .PHONY: docker
 docker: build

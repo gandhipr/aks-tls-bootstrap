@@ -16,6 +16,7 @@ func GetMSIToken(clientId string) (*TokenResponseJson, error) {
 	if clientId != "" {
 		queryParameters["client_id"] = clientId
 	}
+
 	data := &TokenResponseJson{}
 
 	err := getImdsData(url, queryParameters, data)

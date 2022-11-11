@@ -2,7 +2,9 @@ package server
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
+	"os"
 
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore/arm"
@@ -13,15 +15,65 @@ import (
 )
 
 func (s *TlsBootstrapServer) validateVmId(nonce string) error {
-	credential, err := azidentity.NewDefaultAzureCredential(nil)
+	var authMethod, clientID string
+	azureConfig := &KubeletAzureJson{}
+	azureJson, err := os.ReadFile("/etc/kubernetes/azure.json")
 	if err != nil {
-		return fmt.Errorf("failed to get az identity")
+		log.WithError(err).Info("failed to parse /etc/kubernetes/azure.json")
+		return err
+	} else {
+		err := json.Unmarshal(azureJson, azureConfig)
+		if err != nil {
+			log.WithError(err).Info("failed to unmarshal /etc/kubernetes/azure.json")
+			return err
+		} else {
+			clientID = azureConfig.ClientId
+			if azureConfig.ClientId == "msi" {
+				authMethod = "msi"
+				if azureConfig.UserAssignedIdentityID != "" {
+					// user assigned managed identity
+					// not necessary for system assigned.
+					clientID = azureConfig.UserAssignedIdentityID
+				}
+			} else {
+				authMethod = "sp"
+			}
+		}
 	}
+
+	s.Log.Debug("auth method", authMethod)
+	s.Log.Debug("client id ", clientID)
+
+	var credential azcore.TokenCredential
+	if authMethod == "msi" {
+		s.Log.Debug("creating msi credential")
+		var c azcore.TokenCredential
+		var err error
+		if clientID == "msi" {
+			c, err = azidentity.NewManagedIdentityCredential(nil)
+		} else {
+			c, err = azidentity.NewManagedIdentityCredential(&azidentity.ManagedIdentityCredentialOptions{
+				ID: azidentity.ClientID(clientID),
+			})
+		}
+		if err != nil {
+			return fmt.Errorf("failed to get az identity")
+		}
+		credential = c
+	} else {
+		s.Log.Debug("creating sp credential")
+		c, err := azidentity.NewClientSecretCredential(azureConfig.TenantId, clientID, azureConfig.ClientSecret, nil)
+		if err != nil {
+			return fmt.Errorf("failed to get az identity")
+		}
+		credential = c
+	}
+
 	s.Log.Debug("fetched az identity")
 
 	resourceId, err := arm.ParseResourceID(s.requests[nonce].ResourceId)
 	if err != nil {
-		return fmt.Errorf("failed to parse resourceId")
+		return fmt.Errorf("failed to parse resourceId: %s", err)
 	}
 
 	armResources, err := armresources.NewClient(resourceId.SubscriptionID, credential, &arm.ClientOptions{
@@ -29,6 +81,9 @@ func (s *TlsBootstrapServer) validateVmId(nonce string) error {
 			Cloud: cloud.AzurePublic,
 		},
 	})
+	if err != nil {
+		return fmt.Errorf("failed to get arm client: %s", err)
+	}
 
 	s.Log.WithField("resourceId", resourceId.String()).Debug("retrieving arm resource")
 	resource, err := armResources.GetByID(context.Background(), s.requests[nonce].ResourceId, "2022-03-01", nil)

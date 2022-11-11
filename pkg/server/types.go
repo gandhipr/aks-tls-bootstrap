@@ -6,7 +6,6 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/MicahParks/keyfunc"
 	"github.com/golang-jwt/jwt"
 	pb "github.com/phealy/aks-tls-bootstrap/pkg/proto"
 	"github.com/sirupsen/logrus"
@@ -18,11 +17,8 @@ type TlsBootstrapServer struct {
 	SignerHostName          string
 	AllowedClientIds        []string
 	requests                map[string]*Request
-	jwksKeyfunc             *keyfunc.JWKS
 	JwksUrl                 string
 	Log                     *logrus.Entry
-	MasterUrl               string
-	KubeconfigPath          string
 	k8sClientSet            *kubernetes.Clientset
 	kubeSystemSecretsClient coreV1Types.SecretInterface
 	RootCertPath            string
@@ -99,4 +95,12 @@ type AttestedData struct {
 		ExpiresOn string `json:"expiresOn"`
 	} `json:"timestamp"`
 	VmId string `json:"vmId"`
+}
+
+// TODO: duped from client package.
+type KubeletAzureJson struct {
+	ClientId               string `json:"aadClientId"`
+	ClientSecret           string `json:"aadClientSecret"`
+	TenantId               string `json:"tenantId"`
+	UserAssignedIdentityID string `json:"userAssignedIdentityID"`
 }

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"flag"
 	"fmt"
 	"net"
@@ -22,14 +23,11 @@ var (
 	port                = flag.Int("port", 9123, "The port to run the gRPC server on.")
 	jwksUrl             = flag.String("jwks-url", "https://login.microsoftonline.com/common/discovery/v2.0/keys", "The JWKS endpoint for the Azure AD to use.")
 	signerHostName      = flag.String("imds-signer-name", "metadata.azure.com", "The hostname that must be present in the signing certificate from IMDS.")
-	tenantId            = flag.String("tenant-id", "", "Required tenant ID for authentication")
 	allowedClientIds    = flag.String("allowed-client-ids", "", "A comma separated list of allowed client IDs for the service.")
 	tlsCert             = flag.String("tls-cert", "", "TLS certificate path")
 	tlsKey              = flag.String("tls-key", "", "TLS key path")
 	rootCertDir         = flag.String("root-cert-dir", "", "A path to a directory containing root certificates. If not supplied, the system root certificate store will be used.")
 	intermediateCertDir = flag.String("intermediate-cert-dir", "", "A path to a directory containing intermediate certificates to be loaded to the cache.")
-	masterUrl           = flag.String("master-url", "", "Master URL for kubernetes-go.")
-	kubeconfigPath      = flag.String("kubeconfig", "", "Path to a kubeconfig file.")
 	debug               = flag.Bool("debug", false, "enable debug logging (WILL LOG AUTHENTICATION DATA)")
 )
 
@@ -63,6 +61,16 @@ func main() {
 		tlsCreds = grpc.Creds(tls)
 	}
 
+	azureConfig := &server.KubeletAzureJson{}
+	azureJson, err := os.ReadFile("/etc/kubernetes/azure.json")
+	if err != nil {
+		log.Fatalf("failed to parse /etc/kubernetes/azure.json: %v", err)
+	}
+
+	if err := json.Unmarshal(azureJson, azureConfig); err != nil {
+		log.Fatalf("failed to unmarshal /etc/kubernetes/azure.json: %v", err)
+	}
+
 	s := &server.TlsBootstrapServer{
 		Log:                  logrus.NewEntry(log),
 		AllowedClientIds:     strings.Split(*allowedClientIds, ","),
@@ -70,9 +78,7 @@ func main() {
 		JwksUrl:              *jwksUrl,
 		RootCertPath:         *rootCertDir,
 		SignerHostName:       *signerHostName,
-		TenantId:             *tenantId,
-		MasterUrl:            *masterUrl,
-		KubeconfigPath:       *kubeconfigPath,
+		TenantId:             azureConfig.TenantId,
 	}
 
 	var grpcServer *grpc.Server
